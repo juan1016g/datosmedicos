@@ -1,7 +1,6 @@
-version: '3.8'
 services:
   postgres:
-    container_name: postgres
+    container_name: postgres_dm
     image: 'docker.io/library/postgres:latest'
     environment:
       POSTGRES_DB: datos_medicos_db
