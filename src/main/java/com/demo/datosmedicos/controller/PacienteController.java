@@ -22,9 +22,15 @@ public class PacienteController {
     @PostMapping
     @Operation(summary = "Crear un nuevo paciente", description = "Guarda un paciente utilizando su nombre y documento de identidad.")
     @ApiResponse(responseCode = "200", description = "Paciente creado exitosamente")
-    public ResponseEntity<Paciente> crearPaciente(
+    @ApiResponse(responseCode = "409", description = "El documento de identidad ya está registrado")
+    public ResponseEntity<?> crearPaciente(
             @Parameter(description = "Nombre completo del paciente") @RequestParam String nombre,
             @Parameter(description = "Documento de identidad único") @RequestParam String documentoIdentidad) {
+
+        if (pacienteRepository.existsByDocumentoIdentidad(documentoIdentidad)) {
+            return ResponseEntity.status(409)
+                    .body("Ya existe un paciente registrado con el documento " + documentoIdentidad);
+        }
 
         Paciente nuevoPaciente = Paciente.builder()
                 .nombre(nombre)
@@ -53,15 +59,39 @@ public class PacienteController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar información del paciente", description = "Modifica el nombre y documento de un paciente existente.")
-    public ResponseEntity<Paciente> actualizarPaciente(
+    @ApiResponse(responseCode = "409", description = "El documento de identidad ya está registrado por otro paciente")
+    public ResponseEntity<?> actualizarPaciente(
             @Parameter(description = "ID del paciente a modificar") @PathVariable Long id,
             @Parameter(description = "Nuevo nombre del paciente") @RequestParam String nombre,
             @Parameter(description = "Nuevo documento de identidad") @RequestParam String documentoIdentidad) {
         Paciente paciente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
 
+        var existente = pacienteRepository.findByDocumentoIdentidad(documentoIdentidad);
+
+        if (existente.isPresent() && !existente.get().getId().equals(id)) {
+            return ResponseEntity.status(409)
+                    .body("El documento " + documentoIdentidad + " ya pertenece a otro paciente.");
+        }
+
         paciente.setNombre(nombre);
         paciente.setDocumentoIdentidad(documentoIdentidad);
+
+        return ResponseEntity.ok(pacienteRepository.save(paciente));
+    }
+
+    @PatchMapping("/{id}/nombre")
+    @Operation(summary = "Actualizar solo el nombre del paciente", description = "Modifica únicamente el nombre de un paciente existente, sin afectar el resto de sus datos.")
+    @ApiResponse(responseCode = "200", description = "Nombre actualizado exitosamente")
+    @ApiResponse(responseCode = "404", description = "Paciente no encontrado")
+    public ResponseEntity<Paciente> actualizarNombre(
+            @Parameter(description = "ID del paciente a modificar") @PathVariable Long id,
+            @Parameter(description = "Nuevo nombre del paciente") @RequestParam String nombre) {
+
+        Paciente paciente = pacienteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
+
+        paciente.setNombre(nombre);
 
         return ResponseEntity.ok(pacienteRepository.save(paciente));
     }

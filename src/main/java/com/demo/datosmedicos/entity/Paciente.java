@@ -16,6 +16,6 @@ public class Paciente {
     @Column(nullable = false, length = 100)
     private String nombre;
 
-    @Column(nullable = false, length = 80)
+    @Column(nullable = false, length = 20, unique = true)
     private String documentoIdentidad;
 }
